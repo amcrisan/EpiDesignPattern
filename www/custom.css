@@ -1,0 +1,16 @@
+.skin-black .left-side, .skin-black .main-sidebar, .skin-black .wrapper {
+    background-color: #fff;
+    color: #000;
+    /*border-radius: 0 0 3px 3px;
+    padding: 10px;*/
+    box-shadow: 0 0 5px #888888;
+    /*border-right: 6px solid #757474;*/
+}
+
+.sidebar{
+  color: #000;
+}
+
+#ex_radio input[type='radio']:checked+span{ 
+             color: red; 
+             }
