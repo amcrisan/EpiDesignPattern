@@ -28,7 +28,11 @@ dashboardPage(skin = "black",
         verbatimTextOutput("info")
         ),
     box(title="Geography",
-        width=6)
+        leafletOutput("caseMap"),
+        width=6),
+    box(title="Timeline",
+        dygraphOutput("timeline"),
+        width=12)
   )
 )
 

@@ -1,5 +1,11 @@
 colorTreeTip = function(tree,metadata,var) {
-  tree %<+% metadata + geom_tippoint(aes_string(color=var),size=5, alpha=0.35) + theme(legend.position="right")
+  t<-tree %<+% metadata + geom_tippoint(aes_string(color=var),size=5, alpha=0.35) + theme(legend.position="right")
+
+  if(var %in% c("Country")){
+    t<-t + scale_color_manual(values=countryCol)
+  }
+  
+  t
 }
 
 
