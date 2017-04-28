@@ -1,5 +1,7 @@
 library(shiny)
 library(shinydashboard)
+library(leaflet)
+library(dygraphs)
 
 dashboardPage(skin = "black",
   dashboardHeader(),
@@ -19,6 +21,9 @@ dashboardPage(skin = "black",
     tags$head(
       tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
     ),
+    box(title="Timeline",
+        dygraphOutput("timeline"),
+        width=12),
     box(title="Phylogeny",
         width=6,
         plotOutput("treePlot",
@@ -27,10 +32,7 @@ dashboardPage(skin = "black",
         ),
     box(title="Geography",
         leafletOutput("caseMap"),
-        width=6),
-    box(title="Timeline",
-        dygraphOutput("timeline"),
-        width=12)
+        width=6)
   )
 )
 

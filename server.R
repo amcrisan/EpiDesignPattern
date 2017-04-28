@@ -14,6 +14,7 @@ library(ggmap)
 library(RColorBrewer)
 library(dygraphs)
 library(xts)
+library(leaflet)
 
 source("serverUtility.R")
 source("colourManager.R")
