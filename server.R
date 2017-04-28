@@ -8,6 +8,7 @@
 library(ape)
 library(ggtree)
 library(lubridate)
+library(tidyr)
 library(dplyr)
 library(ggmap)
 library(RColorBrewer)
@@ -105,7 +106,7 @@ shinyServer(function(input, output) {
       aggDat<-metadataReactive() %>%
         filter(Country !="?") %>%
         group_by(Country,country_lon,country_lat) %>%
-        count()%>% 
+        dplyr::count()%>% 
         mutate(popup=sprintf("%s = %d cases",Country,n))
       
       m<-leaflet(aggDat) 
@@ -139,7 +140,7 @@ shinyServer(function(input, output) {
       aggDat<-metadataReactive() %>%
         filter(Country !="?") %>%
         group_by(Country,Region,region_lon,region_lat) %>%
-        count()%>% 
+        dplyr::count()%>% 
         mutate(popup=sprintf("%s (%s) = %d cases",Region,Country,n))
       
       m<-leaflet(aggDat)
@@ -167,9 +168,9 @@ shinyServer(function(input, output) {
     #count cases by date, we're also going to aggregatge by *month* so we're going to 
     #create a new time variable
     timeseriesData<-metadata %>%
-      mutate(yearMonth=ymd(sapply(YearMonth,function(x){paste(x,"01",sep="-")}))) %>%
+      mutate(yearMonth=ymd(sapply(YearMonth,function(x){paste(x,"01",sep="-")}))) %>% 
       group_by(yearMonth)%>% 
-      count(Country) %>%
+      dplyr::count(Country) %>%
       complete(yearMonth,Country) %>% #make sure that all dates are represented
       mutate(n=replace(n,is.na(n),0)) #turn NAs from above command in zeros
     
@@ -186,9 +187,9 @@ shinyServer(function(input, output) {
     colnames(xtsObj)<-unique(timeseriesData$Country)
 
     #now make the the dygraph (yay!)
-    dygraph(xtsObj) %>% 
-      dyOptions(stackedGraph = TRUE,colors = countryCol) %>% 
-      dyRangeSelector()
+    dygraph(xtsObj,height=200) %>% 
+      dyOptions(stackedGraph = TRUE,colors = countryCol$colVals) %>% 
+      dyRangeSelector(fillColor="#c97f91",strokeColor="#c97f91")
   })
 })
 

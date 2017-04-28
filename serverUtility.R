@@ -3,7 +3,7 @@ colorTreeTip = function(tree,metadata,var) {
 
   if(var %in% c("Country")){
     #be intelligent about the colour scale, based upon what data there actuall is
-    t<-t + scale_color_manual(values=countryCol$colVals)
+    t<-t + scale_color_manual(values=as.character(countryCol$colVals),drop=FALSE)
   }
   
   t
