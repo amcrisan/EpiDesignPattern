@@ -5,27 +5,63 @@
 # http://shiny.rstudio.com
 #
 
-library(shiny)
+library(ape)
 library(ggtree)
-library(leaflet)
+library(lubridate)
+library(dplyr)
+library(ggmap)
 library(RColorBrewer)
+library(dygraphs)
+library(xts)
 
 source("serverUtility.R")
 source("colourManager.R")
 
 shinyServer(function(input, output) {
-
-  #phylogenetic tree
+  
+  ##### REACTIVE VARIABLES
+  # metadata variable that changes reactive according to the
+  # timeline date range
+  metadataReactive <- reactive({
+    startDate<-input$timeline_date_window[[1]]
+    endDate<-input$timeline_date_window[[2]]
+    
+    if(is.null(startDate)){
+      metadata #when program initializes, start date will be null, so we send up the full dataset
+    }else{
+      metadata %>% filter(Date>=startDate & Date <= endDate)
+    }
+  })
+    
+  
+  
+  ##### VISUALIZATIONS
+  
+  # Phylogenetic trees 
   output$treePlot <- renderPlot({
-    tree<-readRDS("./data/ebolaTree.RDS")
+    
+    #We're going to load trees that have already been stored.
+    # The alternative is to re-compute tree each time, which can be slow
+    # Since we're keeping the base structure, it's good to 
+    tree<-readRDS("./data/ebolaTree.RDS")  # default is rooted tree
     
     if(input$treeLayout=="circ"){
-      tree<-readRDS("./data/ebolaTree_circular.RDS")
+      tree<-readRDS("./data/ebolaTree_circular.RDS") #alternative is 
     }
     
     #metadata is available as a global variable, so we don't need to load it
-    tree<-colorTreeTip(tree,metadata,input$colorBy)
+    #but we've also created this reactive variable, so we're going to 
+    #also colour by
+    colTreeMeta<-metadata[,c("ID","Country","Region","Date")]
+    colTreeMeta$Country<-factor(colTreeMeta$Country,levels=c(levels(colTreeMeta$Country),"")) #this is a hack to avoid a ggtree error
     
+    temp<-metadataReactive()
+    colTreeMeta<-colTreeMeta %>%
+      #mutate(Country = replace(Country,Country == "GIN",""))
+      mutate(Country = replace(Country,!(ID %in% temp$ID),""))
+    
+    tree<-colorTreeTip(tree,colTreeMeta,input$colorBy)
+  
     #works!
     if(!is.null(input$plot_brush) & input$treeLayout == "rec"){
       e<-input$plot_brush
@@ -61,12 +97,12 @@ shinyServer(function(input, output) {
   
   #a map on the side, which will change layers according to 
   output$caseMap<-renderLeaflet({
-    m<-NULL
+     m<-NULL
     
     if(input$colorBy=="Country" | input$colorBy=="Date"){
       #pal<-colorFactor(brewer.pal(name="Set1",3), domain = c("GIN","LIB","SLE"))
       
-      aggDat<-metadata %>%
+      aggDat<-metadataReactive() %>%
         filter(Country !="?") %>%
         group_by(Country,country_lon,country_lat) %>%
         count()%>% 
@@ -100,7 +136,7 @@ shinyServer(function(input, output) {
       
       #pal<-colorFactor(brewer.pal(name="Set1",3), domain = c("GIN", "SLE","LIB"))
       
-      aggDat<-metadata %>%
+      aggDat<-metadataReactive() %>%
         filter(Country !="?") %>%
         group_by(Country,Region,region_lon,region_lat) %>%
         count()%>% 
@@ -124,40 +160,35 @@ shinyServer(function(input, output) {
   })
   
   output$timeline<-renderDygraph({
-    #Ginea
-    GIN<-metadata %>%
-      filter(Country=="GIN") %>%
-      group_by(YearMonth) %>%
-      count()
+    ######
+    # To create the dygraph, we need to generate and xts series for *each* of the countries.
+    # I've done this manually here, but there are ways to do this automatically
     
-    GIN$YearMonth<-ymd(sapply(GIN$YearMonth,function(x){paste(x,"01",sep="-")}))
+    #count cases by date, we're also going to aggregatge by *month* so we're going to 
+    #create a new time variable
+    timeseriesData<-metadata %>%
+      mutate(yearMonth=ymd(sapply(YearMonth,function(x){paste(x,"01",sep="-")}))) %>%
+      group_by(yearMonth)%>% 
+      count(Country) %>%
+      complete(yearMonth,Country) %>% #make sure that all dates are represented
+      mutate(n=replace(n,is.na(n),0)) #turn NAs from above command in zeros
     
-    xtsGIN<-xts(GIN$n, GIN$YearMonth)
+    #create an xts object
+    xtsObj<-c()
+    for(i in unique(timeseriesData$Country)){
+      temp<-timeseriesData %>%
+        filter(Country == i)
+      
+      xtsObj<-cbind(xtsObj,xts(temp$n, temp$yearMonth))
+    }
     
-    #Sierra Leone
-    SLE<-metadata %>%
-      filter(Country=="SLE") %>%
-      group_by(YearMonth) %>%
-      count()
-    
-    SLE$YearMonth<-ymd(sapply(SLE$YearMonth,function(x){paste(x,"01",sep="-")}))
-    xtsSLE<-xts(SLE$n, SLE$YearMonth)
-    
-    xtsObj<-cbind(xtsGIN,xtsSLE)
-    
-    #Liberia
-   LIB<-metadata %>%
-      filter(Country=="LBR") %>%
-      group_by(YearMonth) %>%
-      count()
-    
-    LIB$YearMonth<-ymd(sapply(LIB$YearMonth,function(x){paste(x,"01",sep="-")}))
-    xtsLIB<-xts(LIB$n, LIB$YearMonth)
-    
-    xtsObj<-cbind(xtsGIN,xtsSLE,xtsLIB)
-    colnames(xtsObj)<-c("GIN","SLE","LIB")
-    
-    dygraph(xtsObj) %>% dyRangeSelector()
+    #name out object, so that it plots the time series correctly
+    colnames(xtsObj)<-unique(timeseriesData$Country)
+
+    #now make the the dygraph (yay!)
+    dygraph(xtsObj) %>% 
+      dyOptions(stackedGraph = TRUE,colors = countryCol) %>% 
+      dyRangeSelector()
   })
 })
 

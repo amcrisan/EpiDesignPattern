@@ -11,6 +11,8 @@ library(lubridate)
 library(dplyr)
 library(ggmap)
 library(RColorBrewer)
+library(dygraphs)
+library(xts)
 
 myTree <- read.nexus("./analysis/Makona.tree") #this will read it into a class called phylo
 
@@ -22,7 +24,12 @@ saveRDS(file="./data/ebolaTree.RDS",ggtree(myTree))
 saveRDS(file="./data/ebolaTree_circular.RDS",ggtree(myTree,layout="circular"))
 saveRDS(file="./data/ebolaTree_unrooted.RDS",ggtree(myTree,layout="unrooted"))
 
-#Okay, now here I am just playing around, and figuring things out
+#####################
+#
+# Okay, now here I am just playing around, and figuring things out
+#
+#####################
+
 pTree<-ggtree(myTree)
 
 # I also want to get out the metadata 

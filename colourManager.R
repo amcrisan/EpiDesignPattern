@@ -19,7 +19,7 @@ sleCol<-plasma(n=unlist(dataAgg[3,"n"]))
 
 #colour scale of countries
 
-countryCol<-c(viridis(4))
-pal<-colorFactor(viridis(4), domain = c("GIN","LIB","SLE","?")) #leaflet
+countryCol<-data.frame(colVals=c(viridis(4),"white"),ord=c("?","GIN","LBR","SLE",""))
+pal<-colorFactor(viridis(4), domain = c("?","GIN","LBR","SLE")) #leaflet
 
 #colour scale of regions
