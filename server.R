@@ -16,8 +16,7 @@ library(dygraphs)
 library(xts)
 library(leaflet)
 
-source("serverUtility.R")
-source("colourManager.R")
+source("serverUtility.R") #custom bit of code I wrote with helper functions
 
 shinyServer(function(input, output) {
   
@@ -39,10 +38,12 @@ shinyServer(function(input, output) {
   
   ##### VISUALIZATIONS
   
-  # Phylogenetic trees 
+  # ********
+  # PHYLOGENETIC TREEE
+  
   output$treePlot <- renderPlot({
     
-    #We're going to load trees that have already been stored.
+    # We're going to load trees that have already been stored.
     # The alternative is to re-compute tree each time, which can be slow
     # Since we're keeping the base structure, it's good to 
     tree<-readRDS("./data/ebolaTree.RDS")  # default is rooted tree
@@ -59,12 +60,11 @@ shinyServer(function(input, output) {
     
     temp<-metadataReactive()
     colTreeMeta<-colTreeMeta %>%
-      #mutate(Country = replace(Country,Country == "GIN",""))
       mutate(Country = replace(Country,!(ID %in% temp$ID),""))
     
     tree<-colorTreeTip(tree,colTreeMeta,input$colorBy)
   
-    #works!
+    #Works - but buggy brushing interaction
     if(!is.null(input$plot_brush) & input$treeLayout == "rec"){
       e<-input$plot_brush
       tree<- tree + 
@@ -77,7 +77,9 @@ shinyServer(function(input, output) {
   })
   
 
-  #text out to test out brushing
+  # ********
+  # Little bit of testing code that shows what is being clicked on in the phylogenetic tree
+  #
   output$info <- renderText({
     xy_str <- function(e) {
       if(is.null(e)) return("NULL\n")
@@ -97,7 +99,9 @@ shinyServer(function(input, output) {
     )
   })
   
-  #a map on the side, which will change layers according to 
+  # ********
+  # Map that shows case counts
+  #
   output$caseMap<-renderLeaflet({
      m<-NULL
     
@@ -124,7 +128,8 @@ shinyServer(function(input, output) {
           labelOptions = labelOptions(noHide = T)
         )
     }else if(input$colorBy=="Region"){
-      #this option here lets me have clusters instead
+      #this option here lets me have clusters instead,
+      #I don't use this, but left the code here for others to play around with
       # m<-leaflet(metadata) 
       # 
       # m %>%
@@ -160,6 +165,11 @@ shinyServer(function(input, output) {
     }
     
   })
+  
+  
+  # ********
+  # Timeline
+  #
   
   output$timeline<-renderDygraph({
     ######

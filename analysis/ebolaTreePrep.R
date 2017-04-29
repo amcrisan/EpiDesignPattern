@@ -3,8 +3,7 @@
 #https://bioconductor.org/packages/release/bioc/html/ggtree.html
 
 #data from:https://github.com/nickloman/ebov/blob/master/phylo/beast/Makona_728_cds_ig.MCC.tree
-#read in the nexus treelibrary
-
+#paper about data: https://www.nature.com/nature/journal/v530/n7589/full/nature16996.html
 library(ape)
 library(ggtree)
 library(lubridate)
@@ -14,19 +13,24 @@ library(RColorBrewer)
 library(dygraphs)
 library(xts)
 
+
+#####################
+#
+# Loading ebola phylogenetic tree
+#
+#####################
+#read in the nexus treelibrary
 myTree <- read.nexus("./analysis/Makona.tree") #this will read it into a class called phylo
 
 
-# theses trees can be saved, and don't have to be recomputed from base 
-# if the sole purpose of the application is display
-
+# theses trees can be saved, and don't have to be recomputed when the app starts (saves time!)
 saveRDS(file="./data/ebolaTree.RDS",ggtree(myTree))
 saveRDS(file="./data/ebolaTree_circular.RDS",ggtree(myTree,layout="circular"))
 saveRDS(file="./data/ebolaTree_unrooted.RDS",ggtree(myTree,layout="unrooted"))
 
 #####################
 #
-# Okay, now here I am just playing around, and figuring things out
+# NOW, let's set up the metadata file for three
 #
 #####################
 
@@ -34,7 +38,7 @@ pTree<-ggtree(myTree)
 
 # I also want to get out the metadata 
 
-rawMeta<-get.tree(myTree)$tip.label
+rawMeta<-get.tree(myTree)$tip.label # for these files all the INFO is the tree node label
 
 rawMeta<-sapply(rawMeta,function(x){strsplit(x,"\\|")} %>% unlist()) %>% t()
 rawMeta<-cbind(rownames(rawMeta),rawMeta)
@@ -56,32 +60,7 @@ pTree<-ggtree(myTree,layout="circular")
 pTree %<+% metadata+ geom_tippoint(aes(color=Country),size=5, alpha=0.35) + theme(legend.position="right")
 
 
-
-myplot = function(pTree,metadata,var) {
-  pTree %<+% metadata + geom_tippoint(aes_string(color=var),size=5, alpha=0.35) + theme(legend.position="right")
-}
-
-p2<-myplot(pTree,metadata,"Country")
-
-p2dat<-ggplot_build(p2)$data[[2]]
-nodes<-p2dat %>% 
-    filter(x>=1 & x <=1.9)%>%
-  select(node)
-
-p2+geom_rect(xmin=1,xmax=1.9,ymin=598.9,ymax=763.3,fill=NA,colour="red") +
-  xlim(1,1.9) +
-  ylim(598.9,764.3)
-
-myplot(pTree,metadata,"Country")+geom_hilight(identify(p),fill="lightgrey")
-myplot(pTree,metadata,"Year")
-
-#if I want to highlight a certain range..
-
-
-# now let's map this stuff
-
 #so to add geographic data, I need to do a bit more processing here to store co-ordinates
-
 #I know the countries and Guinea, Sierra Leone, and Liberia, so I'll look those up
 dfCountry<-data.frame(Country=c("GIN","SLE","LBR"),
                       longName=c("Guinea","Sierra Leone","Liberia"),
@@ -129,11 +108,36 @@ metadata$country_lat<-as.numeric(as.character(metadata$country_lat))
 metadata$region_lon<-as.numeric(as.character(metadata$region_lon))
 metadata$region_lat<-as.numeric(as.character(metadata$region_lat))
 
+saveRDS(file="data/ebola_metadata.RDS",metadata) #it all works now, that was annoying
+
+
+################################
+# TESTING OUT SOME VISUALIZAIONS
+#
+
+
+myplot = function(pTree,metadata,var) {
+  pTree %<+% metadata + geom_tippoint(aes_string(color=var),size=5, alpha=0.35) + theme(legend.position="right")
+}
+
+p2<-myplot(pTree,metadata,"Country")
+
+p2dat<-ggplot_build(p2)$data[[2]]
+nodes<-p2dat %>% 
+  filter(x>=1 & x <=1.9)%>%
+  select(node)
+
+p2+geom_rect(xmin=1,xmax=1.9,ymin=598.9,ymax=763.3,fill=NA,colour="red") +
+  xlim(1,1.9) +
+  ylim(598.9,764.3)
+
+myplot(pTree,metadata,"Country")+geom_hilight(identify(p),fill="lightgrey")
+myplot(pTree,metadata,"Year")
+
+
 #testing that the stupid tree plays nice
 pTree %<+% metadata+ geom_tippoint(aes(color=Country),size=5, alpha=0.35) + theme(legend.position="right")
 
-
-saveRDS(file="data/ebola_metadata.RDS",metadata) #it all works now, that was annoying
 
 #Now let's also do this for the different regions
 pal<-colorFactor(brewer.pal(name="Set1",3), domain = c("GIN", "SLE","LIB"))
